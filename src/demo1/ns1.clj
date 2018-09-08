@@ -123,6 +123,16 @@
 (d/bar-me d1)
 (d/bar-me d1 -1)
 
+;; v1: _yes_ trace messages for using apply.
+(apply d/foo [d1])
+(apply d/bar-me [d1])
+(apply d/bar-me [d1 -1])
+
+;; v1: no trace messages for calling x1 on d1.  Hmmm.
+(defn x1 [y]
+  [(d/foo y) (d/bar-me y) (d/bar-me y -1)])
+(x1 d1)
+
 ;; v1: yes trace message for unimplemented protocol method call on
 ;; Demo1Type, at least for the call, but not return, because exception
 ;; thrown before return.
@@ -135,6 +145,7 @@
 (d/bar-me 100 8)
 (d/baz 100)
 (d/guh 100 5)
+(x1 100)
 
 ;; v1: yes trace messages for protocol method calls on Demo1OtherType,
 ;; where all of the implementations were given using extend-type.
@@ -144,6 +155,7 @@
 (d/bar-me d2 -1)
 (d/baz d2)
 (d/guh d2 5)
+(x1 d2)
 
 
 ;; v1: yes trace message for record constructor functions ->Demo1Rec1
@@ -156,13 +168,13 @@
 (d/foo r1)
 (d/bar-me r1)
 (d/bar-me r1 23)
+(x1 r1)
 
 ;; v1: yes trace messages for protocol method calls on a record, where
 ;; the method implementations were given within an extend-type form
 ;; after defrecord and defprotocol.
 (d/baz r1)
 (d/guh r1 37)
-
 
 ;; Evaluating d/bar-me before and after trace-vars below, and again
 ;; after untrace-vars.  It restores back to the original value after
