@@ -18,8 +18,14 @@
 (extend-type java.lang.Long
   Demo1Proto1
   (foo [this] (+ this 17))
-  (bar-me [this] (* this 3))
-  (bar-me [this y] (/ this y)))
+  ;; Note: Even though deftype can define the two arities of bar-me as
+  ;; separate expressions, this does not give a working multi-arity
+  ;; implementation if you try that inside of extend-type.  It will
+  ;; not give any error from compilation, but likely at least one of
+  ;; the arities will throw an exception if you attempt to call it.
+  (bar-me
+    ([this] (* this 3))
+    ([this y] (/ this y))))
 
 
 (defprotocol Demo1Proto2
@@ -34,7 +40,6 @@
 
 (comment
 
-(+ 1 2)
 (require '[clojure.tools.trace :as t])
 (require '[demo1.ns1 :as d] :reload)
 
@@ -43,15 +48,39 @@
 (d/bar-me d1)
 (d/bar-me d1 -1)
 
-;; TBD: Why the exception below?  It occurs whether the only arg is
-;; 100 as shown, or (Long. 100).
-
 (d/foo 100)
 (d/bar-me 100)
-;; => ArityException Wrong number of args (1) passed to: ns1/eval1760/fn--1763  clojure.lang.AFn.throwArity (AFn.java:429)
 (d/bar-me 100 8)
 
 (d/baz 100)
 (d/guh 100 5)
+
+;; Evaluating d/bar-me before and after trace-vars below, and again
+;; after untrace-vars.  It restores back to the original value after
+;; untrace-vars.  That makes sense, since I believe that tools.trace
+;; works by 'wrapping' the original function in another one that
+;; prints extra things when tracing is enabled, and restoring the
+;; original function when tracing is turned off.
+
+d/bar-me
+(fn d/bar-me)
+(t/trace-vars d/foo d/bar-me)
+(t/untrace-vars d/foo d/bar-me)
+
+;; After enabling trace for d/foo and d/bar-me
+
+;; + Evaluating the calls for the java.lang.Long protocol functions
+;;   above will show tracing output.
+
+;; + Evaluating the calls for the demo1.ns1.Demo1Type implementations
+;;   will _not_ show tracing output.  TBD: Why not?  What is the
+;;   difference between these two implementations that causes this
+;;   difference?
+
+;; Is this an easily-fixed bug in tools.trace?
+
+;; Is there some other tracing tools other than tools.trace that can
+;; do this?
+
 
 )
