@@ -20,15 +20,16 @@ haven't checked the details on ClojureScript.
 
 ### Cases where `alter-var-root` based tools work, vs. not
 
-First, a summary of where in Clojure/JVM based programs you can expect
-these kinds of tools to work, vs. where they will not work:
+Here are Clojure tools that work by using `alter-var-root`:
 
 + `trace-ns` and `trace-vars` in the `tools.trace` library
 + `instrument` in Clojure spec
 
-They _do_ work in these cases:
+Here is a summary of where in Clojure/JVM based programs you can
+expect these kinds of tools to work, vs. where they will not work.
 
-+ On a Clojure function defined with `(defn foo ...)` or `(def foo (fn ...))`.
++ They work on Clojure functions defined with `(defn foo ...)` or
+  `(def foo (fn ...))`.
   + Exception: calls made in code compiled with direct linking
     enabled.  With Clojure 1.9.0, all code in the core of Clojure is
     compiled with direct linking enabled, so calls within the core
