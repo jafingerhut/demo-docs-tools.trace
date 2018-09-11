@@ -93,11 +93,33 @@
   (guh [this y] {:guh-on-demo1rec1 this :y y}))
 
 
+(defn x0 [y]
+  (- y 1))
+
+(defn x1 [y]
+  (x0 y))
+
+(defn x2 [y]
+  (bar-me y 32766))
+
+(defn x7 [y]
+  [(foo y) (bar-me y) (bar-me y -1)])
+
+
 (comment
 
 (require '[clojure.tools.trace :as t])
 (require '[demo1.ns1 :as d] :reload)
 (require '[clojure.spec.test.alpha :as stest])
+(require '[no.disassemble :as no])
+
+(println (no/disassemble (fn [])))
+
+(defn java-cp []
+  (get (System/getProperties) "java.class.path"))
+
+(defn java-cp-split []
+  (clojure.string/split (java-cp) #":"))
 
 (t/trace-vars d/foo d/bar-me)
 (t/untrace-vars d/foo d/bar-me)
@@ -139,11 +161,9 @@
 (apply d/bar-me [d1])
 (apply d/bar-me [d1 -1])
 
-;; v1: no trace messages for calling x1 on d1.  Hmmm.
+;; v1: no trace messages for calling d/x7 on d1.  Hmmm.
 ;; v1: no instrument checks spec of bar-me args
-(defn x1 [y]
-  [(d/foo y) (d/bar-me y) (d/bar-me y -1)])
-(x1 d1)
+(d/x7 d1)
 
 ;; v1: yes trace message for unimplemented protocol method call on
 ;; Demo1Type, at least for the call, but not return, because exception
@@ -159,7 +179,7 @@
 (d/bar-me 100 -1)
 (d/baz 100)
 (d/guh 100 5)
-(x1 100)
+(d/x7 100)
 
 ;; v1: yes trace messages for protocol method calls on Demo1OtherType,
 ;; where all of the implementations were given using extend-type.
@@ -170,7 +190,7 @@
 (d/bar-me d2 -1)
 (d/baz d2)
 (d/guh d2 5)
-(x1 d2)
+(d/x7 d2)
 
 
 ;; v1: yes trace message for record constructor functions ->Demo1Rec1
@@ -185,7 +205,7 @@
 (d/bar-me r1)
 (d/bar-me r1 23)
 (d/bar-me r1 -1)
-(x1 r1)
+(d/x7 r1)
 
 ;; v1: yes trace messages for protocol method calls on a record, where
 ;; the method implementations were given within an extend-type form

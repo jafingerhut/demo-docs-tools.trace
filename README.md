@@ -30,12 +30,13 @@ expect these kinds of tools to work, vs. where they will not work.
 
 + They work on Clojure functions defined with `(defn foo ...)` or
   `(def foo (fn ...))`.
-  + Exception: calls made in code compiled with direct linking
-    enabled.  With Clojure 1.9.0, all code in the core of Clojure is
-    compiled with direct linking enabled, so calls within the core
-    Clojure implementation to other functions within the core Clojure
-    implementation are direct linked, and always use the original
-    function definition.
+  + Exception: calls made in code compiled with [direct
+    linking](https://clojure.org/reference/compilation#directlinking)
+    enabled.  Starting with Clojure 1.8.0, all code in the core of
+    Clojure is compiled with direct linking enabled, so calls within
+    the core Clojure implementation to other functions within the core
+    Clojure implementation are direct linked, and always use the
+    original function definition.
   + Exception: calls where the compiler has inlined the function
     definition.
   + Exception: primitive type hinted functions (mentioned by Alex
@@ -123,8 +124,8 @@ core function
 ([ClojureDocs.org
 page](https://clojuredocs.org/clojure.core/alter-var-root)), which
 modifies the value of a Var, to assign new values to the Vars.  The
-new value assigned to the Var `#'user/f1` is a "wrapped" version of
-the original function.  This "wrapped" function performs these steps:
+new value assigned to the Var `#'user/f1` is a "wrapping" version of
+the original function.  This "wrapping" function performs these steps:
 
 + Print a trace message showing the name `user/f1` and the values of
   the parameters.
@@ -132,32 +133,33 @@ the original function.  This "wrapped" function performs these steps:
 + Print a trace message showing the name and the return value.
 + Return the value that the original function did.
 
-Now any call to `user/f1` that performs the 1 level of indirection
+Now any call to `user/f1` that performs the one level of indirection
 through the Var `#'user/f1` will call this modified function instead
 of the original.
 
 Most of the work of `trace-vars` is done inside of a function called
-`trace-vars*`.  You can see the call to `alter-var-root`
+[`trace-var*`](https://github.com/clojure/tools.trace/blob/908ddaf758f26e7ceba71543defd34849cc364af/src/main/clojure/clojure/tools/trace.clj#L313-L335).
+You can see the call to `alter-var-root`
 [here](https://github.com/clojure/tools.trace/blob/908ddaf758f26e7ceba71543defd34849cc364af/src/main/clojure/clojure/tools/trace.clj#L333-L334).
 
 In order for `tools.trace`'s function `untrace-vars` to be able to
 disable tracing on a function, `trace-vars` also remembers the value
 of the original function in a place where `untrace-vars` can find it.
-`trace-vars*` stores the original function value in the metdata of the
+`trace-var*` stores the original function value in the metdata of the
 Var with key `:clojure.tools.trace/traced`
 [here](https://github.com/clojure/tools.trace/blob/908ddaf758f26e7ceba71543defd34849cc364af/src/main/clojure/clojure/tools/trace.clj#L335),
 which is what `::traced` expands into when read by Clojure in the
 namespace `clojure.tools.trace`.
 
 The function `untrace-var*` in `tools.trace` uses `alter-var-root` to
-restore the original value of the Var, and removed the saved function
+restore the original value of the Var, and remove the saved function
 from the Var's metadata.  You can see those steps
 [here](https://github.com/clojure/tools.trace/blob/908ddaf758f26e7ceba71543defd34849cc364af/src/main/clojure/clojure/tools/trace.clj#L352-L353).
 
 Clojure spec's `instrument` and `unstrument` functions work similarly.
 [Here](https://github.com/clojure/spec.alpha/blob/f23ea614b3cb658cff0044a027cacdd76831edcf/src/main/clojure/clojure/spec/test/alpha.clj#L176)
 is the part of `instrument` that replaces the original function with a
-wrapped version that contains the additional instrumenting code, and
+wrapping version that contains the additional instrumenting code, and
 [here](https://github.com/clojure/spec.alpha/blob/f23ea614b3cb658cff0044a027cacdd76831edcf/src/main/clojure/clojure/spec/test/alpha.clj#L187)
 is the part of `unstrument` that restores the Var back to its original
 value.
