@@ -26,32 +26,8 @@ here I hand-edited it to add the lines marked with `+ stack:` because
 I am not very experienced with JVM byte code, and wanted to keep track
 of the contents of the operand stack at each step.
 
-I believe that the code near the end beginning with the line `public
-static {};` is static initialization code for the class created for
-the function `x1`.  It is run only once when the class is loaded, and
-initializes the static variable `const__0` to contain the value
-`#'demo1.ns1/x0`, which is a reference to the Clojure Var, not the
-value of the function object that you get when you deref that Var.
-
-Before that, the biggest method is `invokeStatic`.  These lines are
-the heart of the function `x1`:
-
-```clojure
-     0  getstatic demo1.ns1$x1.const__0 : clojure.lang.Var [15]
-     3  invokevirtual clojure.lang.Var.getRawRoot() : java.lang.Object [21]
-     9  aload_0 [y]
-    12  invokeinterface clojure.lang.IFn.invoke(java.lang.Object) : java.lang.Object [26] [nargs: 2]
-    17  areturn
-```
-
-They call the method `clojure.lang.Var.getRawRoot()` to get the
-current value of the Var `#'demo1.ns1/x0`, push `x1`'s parameter `y`
-onto the stack, then call `invokeinterface` to cause the Clojure
-function `x0` to be called, via calling the Java method
-`clojure.lang.IFn.invoke`.
-
-We will see this same sequence of JVM byte code instructions in the
-disassembly for function `x2`.
+See after the long disassembly listing for my notes on the core of the
+implementation of function `x1`.
 
 ```clojure
 user=> (require '[no.disassemble :as no])
@@ -122,6 +98,33 @@ public final class demo1.ns1$x1 extends clojure.lang.AFunction {
 
 }
 ```
+
+I believe that the code near the end, beginning with the line `public
+static {};`, is static initialization code for the class created for
+the function `x1`.  It is run only once when the class is loaded, and
+initializes the static variable `const__0` to contain the value
+`#'demo1.ns1/x0`, which is a reference to the Clojure Var, not the
+value of the function object that you get when you deref that Var.
+
+Before that, the biggest method is `invokeStatic`.  The lines below
+are the heart of the function `x1`:
+
+```clojure
+     0  getstatic demo1.ns1$x1.const__0 : clojure.lang.Var [15]
+     3  invokevirtual clojure.lang.Var.getRawRoot() : java.lang.Object [21]
+     9  aload_0 [y]
+    12  invokeinterface clojure.lang.IFn.invoke(java.lang.Object) : java.lang.Object [26] [nargs: 2]
+    17  areturn
+```
+
+They call the method `clojure.lang.Var.getRawRoot()` to get the
+current value of the Var `#'demo1.ns1/x0`, push `x1`'s parameter `y`
+onto the stack, then call `invokeinterface` to cause the Clojure
+function `x0` to be called, via calling the Java method
+`clojure.lang.IFn.invoke`.
+
+We will see this same sequence of JVM byte code instructions in the
+disassembly for function `x2`.
 
 
 ## Disassembly of a protocol function call
@@ -296,7 +299,10 @@ code, which are the numbers at the beginning of many of the
 disassembly lines.
 
 ```java
-{
+public final class demo1.ns1$x2 extends clojure.lang.AFunction {
+  private static Class cached_class;
+  
+  public static Object invokeStatic (Object y) {
     y = null;   // pc 1-2
     if (clojure.lang.Util.classOf(y) == cached_class) {  // pc 3-10
         goto label_pc_27;
@@ -313,6 +319,7 @@ label_pc_45:
     demo1.ns1.Demo1Proto1.bar_me(y, 32766);   // pc 48-51
 label_pc_56:
     return;
+  }
 }
 ```
 
@@ -323,7 +330,10 @@ few minor details like the `assert` (JVM byte code `checkcast`) and
 the `y = null` assignment at the beginning.
 
 ```java
-{
+public final class demo1.ns1$x2 extends clojure.lang.AFunction {
+  private static Class cached_class;
+  
+  public static Object invokeStatic (Object y) {
     if (clojure.lang.Util.classOf(y) != cached_class) {  // pc 3-10
         if (y instanceof demo1.ns1.Demo1Proto1) {  // pc 13-17
             // the fast case
@@ -336,5 +346,6 @@ the `y = null` assignment at the beginning.
     same Java code emitted to do a call on a normal Clojure fn that looks like:
     (demo1.ns1/bar-me y 32766)
     including calling getRawRoot() method on the Var (var demo1.ns1/bar-me)
+  }
 }
 ```
