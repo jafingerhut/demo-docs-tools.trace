@@ -112,6 +112,7 @@
 (require '[demo1.ns1 :as d] :reload)
 (require '[clojure.spec.test.alpha :as stest])
 (require '[no.disassemble :as no])
+(require '[clj-java-decompiler.core :as dec])
 
 (println (no/disassemble (fn [])))
 
