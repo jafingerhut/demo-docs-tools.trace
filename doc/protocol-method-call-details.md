@@ -15,6 +15,9 @@ compiled to native machine code is up to the JVM you are using.
   (x0 y))
 ```
 
+See the later section named "What defprotocol creates" for the Java
+objects that evaluating a `defprotocol` form creates in Clojure/Java.
+
 Below we show only the dissassembly of the function `x1`.  The only
 reason I created function `x0` was so that in function `x1`, I could
 call a Clojure Var that I knew was not inlined, had nothing to do with
@@ -348,4 +351,110 @@ public final class demo1.ns1$x2 extends clojure.lang.AFunction {
     including calling getRawRoot() method on the Var (var demo1.ns1/bar-me)
   }
 }
+```
+
+
+## What `defprotocol` creates
+
+The REPL transcript below demonstrates that evaluating this form:
+
+```clojure
+(defprotocol Demo1Proto1
+  (foo [this])
+  (bar-me [this] [this y]))
+```
+
+causes these things to be created:
+
++ A Java interface with a name that is the Clojure namespace
+  concatenated with the protocol name, `user.Demo1Proto1` in this
+  example.  It is in the package that has the same name as the
+  namespace, probably munged to replace characters allowed in Clojure
+  symbols that are not allowed in Java package names.
+
++ A Clojure Var in the namespace where the form is evaluated, with the
+  name of the protocol, `#'user/Demo1Proto1` in this example.  Its
+  value is a Clojure map containing various information about the
+  protocol, including method names and signatures, and a reference to
+  the Java interface object of the previous item.
+
++ One Clojure Var per protocol function/method.  The metadata of each
+  of these Vars contains a reference to the Clojure Var of the
+  previous item under the key `:protocol`.
+
+
+```clojure
+user=> Demo1Proto1
+
+CompilerException java.lang.RuntimeException: Unable to resolve symbol: Demo1Proto1 in this context, compiling:(/private/var/folders/2j/n4d7hmm52zx8l6mpsgqm8tmc0000gn/T/form-init8618819583162487794.clj:1:1053) 
+user=> user.Demo1Proto1
+
+CompilerException java.lang.ClassNotFoundException: user.Demo1Proto1, compiling:(/private/var/folders/2j/n4d7hmm52zx8l6mpsgqm8tmc0000gn/T/form-init8618819583162487794.clj:1:1053) 
+user=> foo
+
+CompilerException java.lang.RuntimeException: Unable to resolve symbol: foo in this context, compiling:(/private/var/folders/2j/n4d7hmm52zx8l6mpsgqm8tmc0000gn/T/form-init8618819583162487794.clj:1:1053) 
+user=> bar-me
+
+CompilerException java.lang.RuntimeException: Unable to resolve symbol: bar-me in this context, compiling:(/private/var/folders/2j/n4d7hmm52zx8l6mpsgqm8tmc0000gn/T/form-init8618819583162487794.clj:1:1053) 
+user=> (defprotocol Demo1Proto1
+         (foo [this])
+         (bar-me [this] [this y]))
+Demo1Proto1
+
+user=> Demo1Proto1
+{:on user.Demo1Proto1, :on-interface user.Demo1Proto1, :sigs {:foo {:name foo, :arglists ([this]), :doc nil}, :bar-me {:name bar-me, :arglists ([this] [this y]), :doc nil}}, :var #'user/Demo1Proto1, :method-map {:bar-me :bar-me, :foo :foo}, :method-builders {#'user/bar-me #object[user$eval1586$fn__1587 0x15dba2 "user$eval1586$fn__1587@15dba2"], #'user/foo #object[user$eval1586$fn__1604 0x278976f5 "user$eval1586$fn__1604@278976f5"]}}
+
+user=> (class Demo1Proto1)
+clojure.lang.PersistentArrayMap
+
+user=> #'Demo1Proto1
+#'user/Demo1Proto1
+
+user=> (meta #'Demo1Proto1)
+{:line 1, :column 1, :file "/private/var/folders/2j/n4d7hmm52zx8l6mpsgqm8tmc0000gn/T/form-init8618819583162487794.clj", :name Demo1Proto1, :ns #object[clojure.lang.Namespace 0x19b3f73 "user"], :doc nil}
+
+user=> (class user.Demo1Proto1)
+java.lang.Class
+
+user=> (identical? user.Demo1Proto1 (:on-interface Demo1Proto1))
+true
+
+user=> (require '[clojure.reflect :as ref])
+nil
+
+user=> (pprint (ref/reflect user.Demo1Proto1))
+{:bases nil,
+ :flags #{:interface :public :abstract},
+ :members
+ #{{:name bar_me,
+    :return-type java.lang.Object,
+    :declaring-class user.Demo1Proto1,
+    :parameter-types [java.lang.Object],
+    :exception-types [],
+    :flags #{:public :abstract}}
+   {:name foo,
+    :return-type java.lang.Object,
+    :declaring-class user.Demo1Proto1,
+    :parameter-types [],
+    :exception-types [],
+    :flags #{:public :abstract}}
+   {:name bar_me,
+    :return-type java.lang.Object,
+    :declaring-class user.Demo1Proto1,
+    :parameter-types [],
+    :exception-types [],
+    :flags #{:public :abstract}}}}
+nil
+
+user=> foo
+#object[user$eval1586$fn__1604$G__1575__1609 0x1132aac4 "user$eval1586$fn__1604$G__1575__1609@1132aac4"]
+
+user=> bar-me
+#object[user$eval1586$fn__1587$G__1577__1596 0x5fbb4e80 "user$eval1586$fn__1587$G__1577__1596@5fbb4e80"]
+
+user=> (meta #'foo)
+{:name foo, :arglists ([this]), :doc nil, :protocol #'user/Demo1Proto1, :ns #object[clojure.lang.Namespace 0x19b3f73 "user"]}
+
+user=> (meta #'bar-me)
+{:name bar-me, :arglists ([this] [this y]), :doc nil, :protocol #'user/Demo1Proto1, :ns #object[clojure.lang.Namespace 0x19b3f73 "user"]}
 ```
