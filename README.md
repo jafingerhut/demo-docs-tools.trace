@@ -22,11 +22,23 @@ haven't checked the details on ClojureScript.
 
 Here are Clojure tools that work by using `alter-var-root`:
 
-+ `trace-ns` and `trace-vars` in the `tools.trace` library
++ `trace-ns` and `trace-vars` in the
+  [`tools.trace`](https://github.com/clojure/tools.trace) library
 + `instrument` in Clojure spec
 
+These tools, that might be in some ways similar to the above, do not
+use `alter-var-root`:
+
++ `memo` and similar functions in the
+  [`core.memoize`](https://github.com/clojure/core.memoize) library,
+  as well as `memoize` built into Clojure.  These take a function as
+  an argument and return a different function based on the one you
+  give them.  They do not modify the behavior of any existing
+  functions.
+
 Here is a summary of where in Clojure/JVM based programs you can
-expect these kinds of tools to work, vs. where they will not work.
+expect tools based on `alter-var-root` to work, vs. where they will
+not work.
 
 + They work on Clojure functions defined with `(defn foo ...)` or
   `(def foo (fn ...))`.
